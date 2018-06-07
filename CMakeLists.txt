@@ -141,7 +141,6 @@ include_directories(
 #add_executable(linuxrec src/linuxrec.c)
 add_executable(iat_record src/iat_record.cpp src/speech_recognizer.cpp src/linuxrec.c)
 #add_executable(iat_publish_speak src/iat_publish_speak.cpp src/speech_recognizer.c src/linuxrec.c)
-add_executable(ros_serials src/ros_serials)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
@@ -218,16 +217,6 @@ target_link_libraries(
    #linuxrec
    #speech_recognizer  
  )
-
-target_link_libraries(
-   ros_serials 
-   ${catkin_LIBRARIES}
- )
-
-
-
-
-
 
 
 #############

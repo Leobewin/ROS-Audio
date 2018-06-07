@@ -84,7 +84,7 @@ static int upload_userwords()
 	}
 	userwords[len] = '\0';
 	
-	MSPUploadData("userwords", userwords, len, "sub = uup, dtt = userword", &ret); //ÉÏ´«ÓÃ»§´Ê±í
+	MSPUploadData("userwords", userwords, len, "sub = uup, dtt = userword", &ret); 
 	if (MSP_SUCCESS != ret)
 	{
 		printf("\nMSPUploadData failed ! errorCode: %d \n", ret);
@@ -283,7 +283,6 @@ static void demo_mic( char* session_begin_params) /* const char* session_begin_p
 		printf("start listen failed %d\n", errcode);
 	}
 
-	int j=0;
 	/* demo 15 seconds recording */
 	while(i++ < 15)
 	{
@@ -320,7 +319,7 @@ init:
     try
     {
 		/* Port need to be changed accordin to system settings */
-        ser.setPort("/dev/ttyUSB1");
+        ser.setPort("/dev/ttyUSB0");
         ser.setBaudrate(115200);
         serial::Timeout time_out = serial::Timeout::simpleTimeout(1000);
         ser.setTimeout(time_out);
@@ -450,7 +449,7 @@ init:
 			{
 					cout << "No audio data received, closing soon..." << endl;
 					/* reset and will receive no audio result */
-					ser.write(RESET); 
+					//ser.write(RESET); 
 					/* closed mode */
 					microphone_mode = eMicPhone_Closed;
 
@@ -461,7 +460,7 @@ init:
 		else 
 		{
 			printf("Demo recgonizing the speech from a recorded audio file\n");
-			demo_file("wav/iflytek02.wav", session_begin_params); 
+			demo_file("test.wav", session_begin_params); 
 			next = 0;
 		}
 
