@@ -38,9 +38,6 @@ struct speech_rec {
 	
 };
 
-extern std::vector<char> audio_data;
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif

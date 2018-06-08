@@ -2,6 +2,12 @@
 * 语音听写(iFly Auto Transform)技术能够实时地将语音转换成对应的文字。
 */
 
+/*
+	@author  Alex Wang
+	@data    2018.06.08
+
+*/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,6 +20,8 @@
 
 /* for ROS and C++*/
 #include <ros/ros.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/Int8.h>
 #include <std_msgs/String.h> 
 #include <serial/serial.h>
 #include <iostream>
@@ -27,9 +35,10 @@ using namespace std;
 #define	BUFFER_SIZE	4096
 
 /* microphone mode */
-#define eMicPhone_Closed 		0
-#define eMicPhone_Activate 		1
-#define eMicPhone_Communicate 	2
+#define eMicPhone_Closed 				0
+#define eMicPhone_Activate 				1
+#define eMicPhone_Communicate 			2
+#define eMicPhone_Communicate_Quit 	   -2
 
 
 /* UART COMMAND */
@@ -137,6 +146,7 @@ void on_result(const char *result, char is_last)
 		show_result(g_result, is_last);
 	}
 }
+
 void on_speech_begin()
 {
 	if (g_result)
@@ -149,6 +159,7 @@ void on_speech_begin()
 
 	printf("Start Listening...\n");
 }
+
 void on_speech_end(int reason)
 {
 	if (reason == END_REASON_VAD_DETECT)
@@ -160,7 +171,7 @@ void on_speech_end(int reason)
 }
 
 /* demo send audio data from a file */
-static void demo_file(const char* audio_file,  char* session_begin_params)  /* const  char* session_begin_params */
+static void demo_file(const char* audio_file,  char* session_begin_params)
 {
 	int	errcode = 0;
 	FILE*	f_pcm = NULL;
@@ -289,12 +300,37 @@ static void demo_mic( char* session_begin_params) /* const char* session_begin_p
 		sleep(1);
 	}
 
-
 	errcode = sr_stop_listening(&iat);
 	if (errcode) {
 		printf("stop listening failed %d\n", errcode);
 	}
 	sr_uninit(&iat);
+}
+
+
+
+/* the mode of the microphone */
+volatile int microphone_mode;
+void microphone_cmd_cb(const std_msgs::Int8ConstPtr &msg)
+{
+
+	if(msg->data == 0)
+	{
+		microphone_mode = eMicPhone_Closed; 
+		cout << "microphone mode: Closed" << endl;
+	}
+
+	if(msg->data == 2)
+	{
+		microphone_mode = eMicPhone_Communicate;
+		cout << "microphone mode: Communicate" << endl;
+	}
+
+	if(msg->data == -2)
+	{
+		microphone_mode = eMicPhone_Communicate_Quit;
+		cout << "microphone mode: Communicate_Quit" << endl;
+	}
 }
 
 
@@ -308,10 +344,19 @@ int main(int argc, char* argv[])
 	ros::init(argc, argv, "ros_audio");
 	ros::NodeHandle nh;
 
-	ros::AsyncSpinner spinner(2);
+	/* publish the microphone state information */
+	ros::Publisher mode_info_pub = nh.advertise<std_msgs::Int8>("microphone_mode_info", 1000);
+	std_msgs::Int8 mode_info;
+	
+	/* publish communication cmd */
+	ros::Publisher communicate_pub = nh.advertise<std_msgs::Bool>("communicate",1000);
+	std_msgs::Bool start_communicate;
+
+	/* subscribe microphone command to change the state of 6MIC ARRAY */
+	ros::Subscriber sub = nh.subscribe("microphone_mode_cmd",1000,microphone_cmd_cb);
+
+	ros::AsyncSpinner spinner(4);
 	spinner.start();
-
-
 
 init:	
 	/*set Serial Port values*/
@@ -347,8 +392,6 @@ init:
         return -1;
     }
 
-	/* the mode of the microphone */
-	int microphone_mode;
 	/* the angle when waked up */
 	int angle;
 
@@ -359,6 +402,7 @@ init:
 	const char* login_params = "appid = 5b0f9ad2, work_dir = .";
 	int aud_src = 0; /* from mic or file */
 	int next = 0;
+	bool activated = false;
 
 	/*
 	* See "iFlytek MSC Reference Manual"
@@ -382,7 +426,7 @@ init:
 		/* wake up and localization mode */
 		ser.write(LOCALIZATION);
 		ser.write(WAKE_UP_YES);
-
+		/*
 		printf("Want to upload the user words ? \n0: No.\n1: Yes\n");
 		scanf("%d", &upload_on);
 		if (upload_on)
@@ -397,78 +441,96 @@ init:
 		printf("Where the audio comes from?\n"
 				"0: From a audio file.\n1: From microphone.\n");
 		scanf("%d", &aud_src);
+		*/
+		aud_src = 1;
 		if(aud_src != 0) 
 		{
-			printf("Demo recognizing the speech from microphone\n");
-			printf("Speak in 15 seconds\n");
-
-			demo_mic(session_begin_params);
-			//cout << audio_data.size() << endl;
-			string s = g_result;
-			if(!s.empty())
+			if(activated)
 			{
-				/*remove punctuation*/	
-				s.erase(s.size()-3,3);  
-				if(s == "灵犀灵犀" || s == "灵犀")
-					{
-						cout << "activated" << endl;
-						/* activation mode */
-						microphone_mode = eMicPhone_Activate;
-						if(ser.available())
-						{
-							std_msgs::String result;
-							result.data = ser.read(ser.available());
-							string s = result.data;
-							/* get the angle */
-							int pos = s.find("angle:");
-						    angle = static_cast<int>(s[pos]) + static_cast<int>(s[pos+1]) + static_cast<int>(s[pos+2]);
-							cout << "angle=" << angle << endl; 
-						}
-						else
-						{
-							ROS_INFO_STREAM(" Serial data not available");
-						}
-					}
-				else
-				{	
-					if(microphone_mode == eMicPhone_Activate)
-					{
-						cout <<"received  " << s << endl;
-						std_msgs::String string_msg;
-						string_msg.data = s;
-					}
-					if(microphone_mode == eMicPhone_Communicate )
-					{
-						/* to be contiue */
-						continue;
-					}
-
+				if(microphone_mode == eMicPhone_Communicate)
+				{
+					cout << "change to communicating mode ..." << endl;
+					start_communicate.data = true;
+					communicate_pub.publish(start_communicate);
+					ros::Duration(5).sleep();
+				}
+				if(microphone_mode == -2)
+				{
+					cout << "quit communicating mode ..." << endl;
+					start_communicate.data = false;
+					communicate_pub.publish(start_communicate);
+					ros::Duration(5).sleep();
 				}
 			}
-			else
+
+			if(microphone_mode != eMicPhone_Communicate)
 			{
+				printf("Demo recognizing the speech from microphone\n");
+				printf("Speak in 15 seconds\n");
+				demo_mic(session_begin_params);
+				//cout << audio_data.size() << endl;
+				string s = g_result;
+				if(!s.empty())
+				{		
+					/*remove punctuation*/	
+					s.erase(s.size()-3,3);  
+					if(s == "灵犀灵犀" || s == "灵犀")
+						{
+							cout << "activated" << endl;
+							/* activation mode */
+							microphone_mode = eMicPhone_Activate;
+							activated = true;
+							if(ser.available())
+							{
+								std_msgs::String result;
+								result.data = ser.read(ser.available());
+								string s = result.data;
+								/* get the angle */
+								int pos = s.find("angle:");
+								angle = static_cast<int>(s[pos]) + static_cast<int>(s[pos+1]) + static_cast<int>(s[pos+2]);
+								cout << "angle=" << angle << endl; 
+							}
+							else
+							{
+								ROS_INFO_STREAM(" Serial data not available");
+							}
+						}
+					else
+					{	
+						if(microphone_mode == eMicPhone_Activate)
+						{
+							cout <<"received  " << s << endl;
+							std_msgs::String string_msg;
+							string_msg.data = s;
+						}
+					}
+				}
+				else
+				{
 					cout << "No audio data received, closing soon..." << endl;
 					/* reset and will receive no audio result */
 					//ser.write(RESET); 
 					/* closed mode */
-					microphone_mode = eMicPhone_Closed;
-
+					//microphone_mode = eMicPhone_Closed;
+					//activated = false;
+				}
+				next = 0;
+				printf("15 sec passed\n");
 			}
-			next = 0;
-			printf("15 sec passed\n");
 		} 
 		else 
 		{
 			printf("Demo recgonizing the speech from a recorded audio file\n");
-			demo_file("test.wav", session_begin_params); 
+			demo_file("/home/wsf/catkin_ws/xf-ros/xfei_asr/src/wav/iflytek02.wav", session_begin_params); 
 			next = 0;
 		}
-
+		/*
 		printf("continue?\n"
 				"0: No.\n1: Yes.\n");
 		scanf("%d", &next);
 		if(!next)
 			goto exit;
+		*/
 	
 
 	}

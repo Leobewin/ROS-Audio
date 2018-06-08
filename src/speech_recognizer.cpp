@@ -16,8 +16,6 @@
 #include <vector>
 using namespace std;
 
-std::vector<char> audio_data;
-
 #define SR_DBGON 1
 #if SR_DBGON == 1
 #	define sr_dbg printf
@@ -51,64 +49,6 @@ enum {
 #define SR_MFREE  	free
 #define SR_MEMSET	memset
 
-
-
-// /* wav音频头部格式 */
-// typedef struct _wave_pcm_hdr
-// {
-// 	char            riff[4];                // = "RIFF"
-// 	int				size_8;                 // = FileSize - 8
-// 	char            wave[4];                // = "WAVE"
-// 	char            fmt[4];                 // = "fmt "
-// 	int				fmt_size;				// = 下一个结构体的大小 : 16
-
-// 	short int       format_tag;             // = PCM : 1
-// 	short int       channels;               // = 通道数 : 1
-// 	int				samples_per_sec;        // = 采样率 : 8000 | 6000 | 11025 | 16000
-// 	int				avg_bytes_per_sec;      // = 每秒字节数 : samples_per_sec * bits_per_sample / 8
-// 	short int       block_align;            // = 每采样点字节数 : wBitsPerSample / 8
-// 	short int       bits_per_sample;        // = 量化比特数: 8 | 16
-
-// 	char            data[4];                // = "data";
-// 	int				data_size;              // = 纯数据长度 : FileSize - 44 
-// } wave_pcm_hdr;
-// /* 默认wav音频头部数据 */
-// wave_pcm_hdr default_wav_hdr = 
-// {
-// 	{ 'R', 'I', 'F', 'F' },
-// 	0,
-// 	{'W', 'A', 'V', 'E'},
-// 	{'f', 'm', 't', ' '},
-// 	16,
-// 	1,
-// 	1,
-// 	16000,
-// 	32000,
-// 	2,
-// 	16,
-// 	{'d', 'a', 't', 'a'},
-// 	0  
-// };
-
-
-// /* wave head */
-// wave_pcm_hdr wav_hdr = default_wav_hdr;
-// FILE*        fp           = NULL;
-// fp = fopen("test.wav", "ab");
-
-// fwrite(&wav_hdr, sizeof(wav_hdr) ,1, fp); //添加wav音频头，使用采样率为16000
-// const void * audio_data = data;
-// fwrite(audio_data, strlen(data),1, fp);
-// wav_hdr.data_size += strlen(data); //计算data_size大小
-
-// wav_hdr.size_8 += wav_hdr.data_size + (sizeof(wav_hdr) - 8);
-// /* 将修正过的数据写回文件头部,音频文件为wav格式 */
-// fseek(fp, 4, 0);
-// fwrite(&wav_hdr.size_8,sizeof(wav_hdr.size_8), 1, fp); //写入size_8的值
-// fseek(fp, 40, 0); //将文件指针偏移到存储data_size值的位置
-// fwrite(&wav_hdr.data_size,sizeof(wav_hdr.data_size), 1, fp); //写入data_size的值
-// fclose(fp);
-// fp = NULL;
 
 
 static void Sleep(size_t ms)
@@ -383,8 +323,12 @@ int sr_stop_listening(struct speech_rec *sr)
 			end_sr_on_error(sr, ret);
 			return ret;
 		}
+
 		if (NULL != rslt && sr->notif.on_result)
+		{
+			cout << *rslt << "here" << endl;
 			sr->notif.on_result(rslt, sr->rec_stat == MSP_REC_STATUS_COMPLETE ? 1 : 0);
+		}
 		Sleep(100);
 
 
