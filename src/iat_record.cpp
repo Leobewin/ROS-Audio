@@ -294,8 +294,8 @@ static void demo_mic( char* session_begin_params) /* const char* session_begin_p
 		printf("start listen failed %d\n", errcode);
 	}
 
-	/* demo 15 seconds recording */
-	while(i++ < 15)
+	/* demo 10 seconds recording */
+	while(i++ < 10)
 	{
 		sleep(1);
 	}
@@ -347,7 +347,11 @@ int main(int argc, char* argv[])
 	/* publish the microphone state information */
 	ros::Publisher mode_info_pub = nh.advertise<std_msgs::Int8>("microphone_mode_info", 1000);
 	std_msgs::Int8 mode_info;
-	
+
+	/* publish the wake up angle */
+	ros::Publisher angle_pub = nh.advertise<std_msgs::Int8>("wake_up_angle", 1000);
+	std_msgs::Int8 angle_info;
+
 	/* publish communication cmd */
 	ros::Publisher communicate_pub = nh.advertise<std_msgs::Bool>("communicate",1000);
 	std_msgs::Bool start_communicate;
@@ -450,13 +454,18 @@ init:
 				if(microphone_mode == eMicPhone_Communicate)
 				{
 					cout << "change to communicating mode ..." << endl;
+					ser.write(TALK);
+					mode_info.data = eMicPhone_Communicate;
+					mode_info_pub.publish(mode_info);
 					start_communicate.data = true;
 					communicate_pub.publish(start_communicate);
 					ros::Duration(5).sleep();
 				}
-				if(microphone_mode == -2)
+				if(microphone_mode == eMicPhone_Communicate_Quit)
 				{
 					cout << "quit communicating mode ..." << endl;
+					mode_info.data = eMicPhone_Communicate_Quit;
+					mode_info_pub.publish(mode_info);
 					start_communicate.data = false;
 					communicate_pub.publish(start_communicate);
 					ros::Duration(5).sleep();
@@ -479,6 +488,8 @@ init:
 							cout << "activated" << endl;
 							/* activation mode */
 							microphone_mode = eMicPhone_Activate;
+							mode_info.data = eMicPhone_Activate;
+							mode_info_pub.publish(mode_info);
 							activated = true;
 							if(ser.available())
 							{
@@ -489,6 +500,7 @@ init:
 								int pos = s.find("angle:");
 								angle = static_cast<int>(s[pos]) + static_cast<int>(s[pos+1]) + static_cast<int>(s[pos+2]);
 								cout << "angle=" << angle << endl; 
+								angle_info.data = angle;
 							}
 							else
 							{
@@ -502,6 +514,7 @@ init:
 							cout <<"received  " << s << endl;
 							std_msgs::String string_msg;
 							string_msg.data = s;
+							/* do Semantic Analysis */
 						}
 					}
 				}
