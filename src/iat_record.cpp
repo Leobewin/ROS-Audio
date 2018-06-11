@@ -236,7 +236,7 @@ init:
     } 
     else 
     { 
-        return -1;
+        goto init;
     }
 
 	/* the angle when waked up */
@@ -274,7 +274,7 @@ init:
 		aud_src = 1;
 		if(aud_src != 0) 
 		{
-			
+			/* if the mode command is the communication, change it */
 			if(microphone_mode_cmd == eMicPhone_Communicate)
 			{
 				microphone_mode = eMicPhone_Communicate;
@@ -287,6 +287,7 @@ init:
 				ros::Duration(5).sleep();
 				microphone_mode_cmd = -99;
 			}
+			/* when communication is done */
 			if(microphone_mode_cmd == eMicPhone_Communicate_Quit)
 			{
 				microphone_mode = eMicPhone_Communicate_Quit;
@@ -301,6 +302,7 @@ init:
 			
 
 activate:
+			/* process the activate mode here */
 			if(microphone_mode != eMicPhone_Communicate)
 			{
 				/* wake up and localization mode */
@@ -309,6 +311,7 @@ activate:
 				/* read Serial data */
 				if(ser.available())
 				{
+					/* if we get the wake-up angle, we know the microphone is activated */
 					std_msgs::String result;
 					result.data = ser.read(ser.available());
 					string s = result.data;
@@ -336,12 +339,12 @@ activate:
 					{
 						if(microphone_mode != eMicPhone_Activate)
 						{
-							ROS_INFO_STREAM("Please activate the microphone !" << endl);	
+							//ROS_INFO_STREAM("Please activate the microphone !" << endl);	
 							goto activate;
 						}
 					}
 				}
-
+				/* if the microphone is activated, we then get the audio result recognized by SDK and do what we want */
 				if(microphone_mode == eMicPhone_Activate)
 				{
 					printf(" Recognizing the speech from microphone\n");
@@ -358,7 +361,8 @@ activate:
 					}
 					else
 					{
-close:
+close:					
+						/* if the microphone is activated and no audio result received, then we close it */
 						if(microphone_mode != eMicPhone_Closed)
 						{
 							cout << "No audio data received, closing soon..." << endl;
