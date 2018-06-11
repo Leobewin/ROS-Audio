@@ -26,6 +26,7 @@
 #include <serial/serial.h>
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <cstdlib>
 using namespace std;
 
@@ -54,66 +55,6 @@ using namespace std;
 #define BEAM_3  		"BEAM 3\n"
 #define BEAM_4  		"BEAM 4\n"
 #define BEAM_5  		"BEAM 5\n"
-
-
-
-
-/* Upload User words */
-static int upload_userwords()
-{
-	char*			userwords	=	NULL;
-	size_t			len			=	0;
-	size_t			read_len	=	0;
-	FILE*			fp			=	NULL;
-	int				ret			=	-1;
-
-	fp = fopen("userwords.txt", "rb");
-	if (NULL == fp)										
-	{
-		printf("\nopen [userwords.txt] failed! \n");
-		goto upload_exit;
-	}
-
-	fseek(fp, 0, SEEK_END);
-	len = ftell(fp); 
-	fseek(fp, 0, SEEK_SET);  					
-	
-	userwords = (char*)malloc(len + 1);
-	if (NULL == userwords)
-	{
-		printf("\nout of memory! \n");
-		goto upload_exit;
-	}
-
-	read_len = fread((void*)userwords, 1, len, fp); 
-	if (read_len != len)
-	{
-		printf("\nread [userwords.txt] failed!\n");
-		goto upload_exit;
-	}
-	userwords[len] = '\0';
-	
-	MSPUploadData("userwords", userwords, len, "sub = uup, dtt = userword", &ret); 
-	if (MSP_SUCCESS != ret)
-	{
-		printf("\nMSPUploadData failed ! errorCode: %d \n", ret);
-		goto upload_exit;
-	}
-	
-upload_exit:
-	if (NULL != fp)
-	{
-		fclose(fp);
-		fp = NULL;
-	}	
-	if (NULL != userwords)
-	{
-		free(userwords);
-		userwords = NULL;
-	}
-	
-	return ret;
-}
 
 
 static void show_result(char *string, char is_over)
@@ -170,105 +111,6 @@ void on_speech_end(int reason)
 		printf("\nRecognizer error %d\n", reason);
 }
 
-/* demo send audio data from a file */
-static void demo_file(const char* audio_file,  char* session_begin_params)
-{
-	int	errcode = 0;
-	FILE*	f_pcm = NULL;
-	char*	p_pcm = NULL;
-	unsigned long	pcm_count = 0;
-	unsigned long	pcm_size = 0;
-	unsigned long	read_size = 0;
-	struct speech_rec iat;
-	struct speech_rec_notifier recnotifier = {
-		on_result,
-		on_speech_begin,
-		on_speech_end
-	};
-
-	if (NULL == audio_file)
-		goto iat_exit;
-
-	f_pcm = fopen(audio_file, "rb");
-	if (NULL == f_pcm)
-	{
-		printf("\nopen [%s] failed! \n", audio_file);
-		goto iat_exit;
-	}
-
-	fseek(f_pcm, 0, SEEK_END);
-	pcm_size = ftell(f_pcm);
-	fseek(f_pcm, 0, SEEK_SET);
-
-	p_pcm = (char *)malloc(pcm_size);
-	if (NULL == p_pcm)
-	{
-		printf("\nout of memory! \n");
-		goto iat_exit;
-	}
-
-	read_size = fread((void *)p_pcm, 1, pcm_size, f_pcm);
-	if (read_size != pcm_size)
-	{
-		printf("\nread [%s] error!\n", audio_file);
-		goto iat_exit;
-	}
-
-	errcode = sr_init(&iat, session_begin_params, SR_USER, &recnotifier);
-	if (errcode) {
-		printf("speech recognizer init failed : %d\n", errcode);
-		goto iat_exit;
-	}
-
-	errcode = sr_start_listening(&iat);
-	if (errcode) {
-		printf("\nsr_start_listening failed! error code:%d\n", errcode);
-		goto iat_exit;
-	}
-
-	while (1)
-	{
-		unsigned int len = 10 * FRAME_LEN; /* 200ms audio */
-		int ret = 0;
-
-		if (pcm_size < 2 * len)
-			len = pcm_size;
-		if (len <= 0)
-			break;
-
-		ret = sr_write_audio_data(&iat, &p_pcm[pcm_count], len);
-
-		if (0 != ret)
-		{
-			printf("\nwrite audio data failed! error code:%d\n", ret);
-			goto iat_exit;
-		}
-
-		pcm_count += (long)len;
-		pcm_size -= (long)len;		
-	}
-
-	errcode = sr_stop_listening(&iat);
-	if (errcode) {
-		printf("\nsr_stop_listening failed! error code:%d \n", errcode);
-		goto iat_exit;
-	}
-
-iat_exit:
-	if (NULL != f_pcm)
-	{
-		fclose(f_pcm);
-		f_pcm = NULL;
-	}
-	if (NULL != p_pcm)
-	{
-		free(p_pcm);
-		p_pcm = NULL;
-	}
-
-	sr_stop_listening(&iat);
-	sr_uninit(&iat);
-}
 
 /* demo recognize the audio from microphone */
 static void demo_mic( char* session_begin_params) /* const char* session_begin_params */
@@ -311,25 +153,26 @@ static void demo_mic( char* session_begin_params) /* const char* session_begin_p
 
 /* the mode of the microphone */
 volatile int microphone_mode;
+volatile int microphone_mode_cmd;
 void microphone_cmd_cb(const std_msgs::Int8ConstPtr &msg)
 {
 
 	if(msg->data == 0)
 	{
-		microphone_mode = eMicPhone_Closed; 
-		cout << "microphone mode: Closed" << endl;
+		microphone_mode_cmd = eMicPhone_Closed; 
+		//cout << "microphone mode: Closed" << endl;
 	}
 
 	if(msg->data == 2)
 	{
-		microphone_mode = eMicPhone_Communicate;
-		cout << "microphone mode: Communicate" << endl;
+		microphone_mode_cmd = eMicPhone_Communicate;
+		//cout << "microphone mode: Communicate" << endl;
 	}
 
 	if(msg->data == -2)
 	{
-		microphone_mode = eMicPhone_Communicate_Quit;
-		cout << "microphone mode: Communicate_Quit" << endl;
+		microphone_mode_cmd = eMicPhone_Communicate_Quit;
+		//cout << "microphone mode: Communicate_Quit" << endl;
 	}
 }
 
@@ -354,7 +197,7 @@ int main(int argc, char* argv[])
 
 	/* publish communication cmd */
 	ros::Publisher communicate_pub = nh.advertise<std_msgs::Bool>("communicate",1000);
-	std_msgs::Bool start_communicate;
+	std_msgs::Bool communicate_mode;
 
 	/* subscribe microphone command to change the state of 6MIC ARRAY */
 	ros::Subscriber sub = nh.subscribe("microphone_mode_cmd",1000,microphone_cmd_cb);
@@ -425,127 +268,115 @@ init:
 		goto exit; // login fail, exit the program
 	}
 
+	cout << "If you want to use the microphone, please activate it first or please use the communicate mode ..!" << endl;
 	while(ros::ok())
 	{	
-		/* wake up and localization mode */
-		ser.write(LOCALIZATION);
-		ser.write(WAKE_UP_YES);
-		/*
-		printf("Want to upload the user words ? \n0: No.\n1: Yes\n");
-		scanf("%d", &upload_on);
-		if (upload_on)
-		{
-			printf("Uploading the user words ...\n");
-			ret = upload_userwords();
-			if (MSP_SUCCESS != ret)
-				goto exit;	
-			printf("Uploaded successfully\n");
-		}
-
-		printf("Where the audio comes from?\n"
-				"0: From a audio file.\n1: From microphone.\n");
-		scanf("%d", &aud_src);
-		*/
 		aud_src = 1;
 		if(aud_src != 0) 
 		{
-			if(activated)
+			
+			if(microphone_mode_cmd == eMicPhone_Communicate)
 			{
-				if(microphone_mode == eMicPhone_Communicate)
-				{
-					cout << "change to communicating mode ..." << endl;
-					ser.write(TALK);
-					mode_info.data = eMicPhone_Communicate;
-					mode_info_pub.publish(mode_info);
-					start_communicate.data = true;
-					communicate_pub.publish(start_communicate);
-					ros::Duration(5).sleep();
-				}
-				if(microphone_mode == eMicPhone_Communicate_Quit)
-				{
-					cout << "quit communicating mode ..." << endl;
-					mode_info.data = eMicPhone_Communicate_Quit;
-					mode_info_pub.publish(mode_info);
-					start_communicate.data = false;
-					communicate_pub.publish(start_communicate);
-					ros::Duration(5).sleep();
-				}
+				microphone_mode = eMicPhone_Communicate;
+				cout << "change to communicating mode ..." << endl;
+				ser.write(TALK);
+				mode_info.data = eMicPhone_Communicate;
+				mode_info_pub.publish(mode_info);
+				communicate_mode.data = true;
+				communicate_pub.publish(communicate_mode);
+				ros::Duration(5).sleep();
+				microphone_mode_cmd = -99;
 			}
+			if(microphone_mode_cmd == eMicPhone_Communicate_Quit)
+			{
+				microphone_mode = eMicPhone_Communicate_Quit;
+				cout << "quit communicating mode ..." << endl;
+				mode_info.data = eMicPhone_Communicate_Quit;
+				mode_info_pub.publish(mode_info);
+				communicate_mode.data = false;
+				communicate_pub.publish(communicate_mode);
+				ros::Duration(5).sleep();
+				microphone_mode_cmd = -99;
+			}
+			
 
+activate:
 			if(microphone_mode != eMicPhone_Communicate)
 			{
-				printf("Demo recognizing the speech from microphone\n");
-				printf("Speak in 15 seconds\n");
-				demo_mic(session_begin_params);
-				//cout << audio_data.size() << endl;
-				string s = g_result;
-				if(!s.empty())
-				{		
-					/*remove punctuation*/	
-					s.erase(s.size()-3,3);  
-					if(s == "灵犀灵犀" || s == "灵犀")
-						{
-							cout << "activated" << endl;
-							/* activation mode */
-							microphone_mode = eMicPhone_Activate;
-							mode_info.data = eMicPhone_Activate;
-							mode_info_pub.publish(mode_info);
-							activated = true;
-							if(ser.available())
-							{
-								std_msgs::String result;
-								result.data = ser.read(ser.available());
-								string s = result.data;
-								/* get the angle */
-								int pos = s.find("angle:");
-								angle = static_cast<int>(s[pos]) + static_cast<int>(s[pos+1]) + static_cast<int>(s[pos+2]);
-								cout << "angle=" << angle << endl; 
-								angle_info.data = angle;
-							}
-							else
-							{
-								ROS_INFO_STREAM(" Serial data not available");
-							}
-						}
-					else
+				/* wake up and localization mode */
+				ser.write(LOCALIZATION);
+				ser.write(WAKE_UP_YES);
+				/* read Serial data */
+				if(ser.available())
+				{
+					std_msgs::String result;
+					result.data = ser.read(ser.available());
+					string s = result.data;
+					/* get the angle */
+					int pos = s.find("angle:");
+					if(pos != -1 )
 					{	
-						if(microphone_mode == eMicPhone_Activate)
+						cout << "    activated!    " << endl;
+						/* activation mode */
+						microphone_mode = eMicPhone_Activate;
+						mode_info.data = eMicPhone_Activate;
+						mode_info_pub.publish(mode_info);
+						activated = true;		
+						/* get the angle */
+						string ang;
+						ang  = s.substr(pos+6,3);
+						stringstream ss;
+						ss << ang;
+						ss >> angle;
+						cout << "angle=" << angle << endl; 
+						angle_info.data = angle;
+						angle_pub.publish(angle_info);
+					}
+					else
+					{
+						if(microphone_mode != eMicPhone_Activate)
 						{
-							cout <<"received  " << s << endl;
-							std_msgs::String string_msg;
-							string_msg.data = s;
-							/* do Semantic Analysis */
+							cout << "Please activate the microphone !" << endl;	
+							goto activate;
 						}
 					}
 				}
-				else
-				{
-					cout << "No audio data received, closing soon..." << endl;
-					/* reset and will receive no audio result */
-					//ser.write(RESET); 
-					/* closed mode */
-					//microphone_mode = eMicPhone_Closed;
-					//activated = false;
-				}
-				next = 0;
-				printf("15 sec passed\n");
-			}
-		} 
-		else 
-		{
-			printf("Demo recgonizing the speech from a recorded audio file\n");
-			demo_file("/home/wsf/catkin_ws/xf-ros/xfei_asr/src/wav/iflytek02.wav", session_begin_params); 
-			next = 0;
-		}
-		/*
-		printf("continue?\n"
-				"0: No.\n1: Yes.\n");
-		scanf("%d", &next);
-		if(!next)
-			goto exit;
-		*/
-	
 
+				if(microphone_mode == eMicPhone_Activate)
+				{
+					printf(" Recognizing the speech from microphone\n");
+					printf("Speak in 10 seconds\n");
+					demo_mic(session_begin_params);
+					printf("10 sec passed\n");
+					string audio = g_result;
+					if(!audio.empty())
+					{
+						/*remove punctuation*/
+						audio.erase(audio.size()-3,3);
+						cout << "received " << audio << endl;
+						/* do Semantic Analysis */
+					}
+					else
+					{
+close:
+						if(microphone_mode != eMicPhone_Closed)
+						{
+							cout << "No audio data received, closing soon..." << endl;
+							cout << "If you want to use the microphone, please reactivate it !" << endl;						
+							/* reset and will receive no audio result */
+							ser.write(RESET); 
+							/* closed mode */
+							microphone_mode = eMicPhone_Closed;
+							mode_info.data = eMicPhone_Closed;
+							mode_info_pub.publish(mode_info);
+							activated = false;
+						}
+					}
+
+				}
+			
+			}
+		}
 	}
 exit:
 	MSPLogout(); // Logout...
