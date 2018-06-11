@@ -4,7 +4,7 @@
 
 /*
 	@author  Alex Wang
-	@data    2018.06.08
+	@date    2018.06.08
 
 */
 
@@ -336,7 +336,7 @@ activate:
 					{
 						if(microphone_mode != eMicPhone_Activate)
 						{
-							cout << "Please activate the microphone !" << endl;	
+							ROS_INFO_STREAM("Please activate the microphone !" << endl);	
 							goto activate;
 						}
 					}
