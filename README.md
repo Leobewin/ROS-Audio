@@ -8,7 +8,6 @@
 ---
 * ### __mode_info_pub__
 * ###  __Data__ | __Description__
-       :-------:|:--------------:
        0        |eMicPhone_Closed
        1        |eMicPhone_Activate
        2        |eMicPhone_Communicate
