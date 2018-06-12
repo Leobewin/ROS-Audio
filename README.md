@@ -25,5 +25,16 @@
 * ### description: **publish the wake-up angle**
 * ### data rangle: **0~360**
 ---
-       
+
+## 3. Communicate Mode
+* ### name: __communicate_pub__    
+* ### type: **std_msg::Bool**
+* ### description: **determine when to start or stop the communication mode**
+* ### data rangle: **{False, True}**
+* ###  __Data__ |     __Description__ 
+       False        |    stop communication
+       True         |    start communication
+
+---
+      
     
