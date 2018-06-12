@@ -213,7 +213,7 @@ add_executable(iat_record src/iat_record.cpp src/speech_recognizer.cpp src/linux
 target_link_libraries(
    iat_record
    ${catkin_LIBRARIES} 
-   /home/wsf/catkin_ws/src/ros_audio/lib/libmsc.so -ldl -lpthread -lm -lrt -lasound
+   ${CMAKE_CURRENT_SOURCE_DIR}/lib/libmsc.so -ldl -lpthread -lm -lrt -lasound
    #linuxrec
    #speech_recognizer  
  )
