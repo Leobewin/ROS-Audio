@@ -47,7 +47,7 @@
 * ###  __Data__ |     __Description__ 
        -2        |    stop communication
        2         |    start communication
-       0         |    stop 
+       0         |    reset(will not receive audio data until activated or user commands to communicate)
 ---
  
 
