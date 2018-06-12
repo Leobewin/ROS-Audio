@@ -5,7 +5,6 @@
 
 
 ## 1. Microphone Mode
----
 * ### name: __mode_info_pub__    
 * ### type: **std_msg::Int8**
 * ### description: **publish the microphone mode**
@@ -15,15 +14,16 @@
        1        |    eMicPhone_Activate
        2        |    eMicPhone_Communicate
        -2       |    eMicPhone_Communicate_Quit
+---
        
        
        
        
 ## 2. Wake-up Angle
----
 * ### name: __angle_pub__    
 * ### type: **std_msg::Int8**
 * ### description: **publish the wake-up angle**
-* ### data rangle: **0-360**
+* ### data rangle: **0~360**
+---
        
     
