@@ -200,7 +200,7 @@ int main(int argc, char* argv[])
 	std_msgs::Bool communicate_mode;
 
 	/* subscribe microphone command to change the state of 6MIC ARRAY */
-	ros::Subscriber sub = nh.subscribe("microphone_mode_cmd",1000,microphone_cmd_cb);
+	ros::Subscriber microphone_cmd_sub = nh.subscribe("microphone_mode_cmd",1000,microphone_cmd_cb);
 
 	ros::AsyncSpinner spinner(4);
 	spinner.start();
