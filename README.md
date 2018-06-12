@@ -33,8 +33,8 @@
 * ### description: **publish the command to start Python node to record audio**
 * ### data rangle: **{False, True}**
 * ###  __Data__ |     __Description__ 
-       False        |    stop communication
-       True         |    start communication
+       False        |    stop record
+       True         |    start record
 ---
  
 # Subscriber
