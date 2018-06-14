@@ -14,7 +14,6 @@ import sys
 class Communicate(object):
     def __init__(self):
         rospy.init_node("wav",anonymous=True)
-        #rospy.Subscriber("communicate",Bool,self.cb)
         self.p = pyaudio.PyAudio()
         self.stream = self.p.open(format=self.p.get_format_from_width(2),
                 channels=1,
@@ -24,7 +23,7 @@ class Communicate(object):
                 frames_per_buffer=640)
         self.output_buffer =""
         self.sub = rospy.Subscriber('communicate',Bool,self.cb)
-        self.pub = rospy.Publisher('wav_data',String, queue_size=1000)
+        self.wav_pub = rospy.Publisher('wav_data',String, queue_size=1000)
         self.status = -1 
 
 
@@ -43,7 +42,7 @@ if __name__ == '__main__':
             #c.p.terminate()
             wav = String()
             wav.data = c.output_buffer
-            c.pub.publish(wav)
+            c.wav_pub.publish(wav)
             c.status = -1
         elif c.status == True:
             rospy.loginfo('message in...')
@@ -52,5 +51,4 @@ if __name__ == '__main__':
                 c.output_buffer += data
     rospy.spin()
     
-
  
