@@ -15,10 +15,7 @@
        1        |    eMicPhone_Activate
        2        |    eMicPhone_Communicate
        -2       |    eMicPhone_Communicate_Quit
----
-       
-       
-       
+---       
        
 ## 2. Wake-up Angle
 * ### name: __angle_pub__    
@@ -35,6 +32,13 @@
 * ###  __Data__ |     __Description__ 
        False        |    stop record
        True         |    start record
+---
+
+## 4. Audio Data
+* ### name: __wav_pub__    
+* ### type: **std_msg::String**
+* ### description: **publish the raw audio data in wav format**
+* ### data rangle: **Unknown**
 ---
  
 # Subscriber
