@@ -22,7 +22,7 @@ class Communicate(object):
                 output=False,
                 frames_per_buffer=640)
         self.output_buffer =""
-        self.sub = rospy.Subscriber('communicate',Bool,self.cb)
+        self.communicate_sub = rospy.Subscriber('communicate',Bool,self.cb)
         self.wav_pub = rospy.Publisher('wav_data',String, queue_size=1000)
         self.status = -1 
 
